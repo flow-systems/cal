@@ -9,40 +9,11 @@ WORKDIR /app
 # Enable Corepack for Yarn v3+
 RUN corepack enable && corepack prepare yarn@3.4.1 --activate
 
-# Copy package manager files
-COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn ./.yarn
+# Copy entire source (needed for Yarn workspaces to resolve correctly)
+COPY . .
 
-# Copy all package.json files from workspace
-COPY apps/web/package.json ./apps/web/package.json
-COPY apps/api/package.json ./apps/api/package.json
-COPY apps/api/v1/package.json ./apps/api/v1/package.json
-COPY apps/api/v2/package.json ./apps/api/v2/package.json
-
-# Copy workspace packages (only top-level package.json files that exist)
-COPY packages/prisma/package.json ./packages/prisma/package.json
-COPY packages/app-store-cli/package.json ./packages/app-store-cli/package.json
-COPY packages/config/package.json ./packages/config/package.json
-COPY packages/dayjs/package.json ./packages/dayjs/package.json
-COPY packages/emails/package.json ./packages/emails/package.json
-COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
-COPY packages/eslint-plugin/package.json ./packages/eslint-plugin/package.json
-COPY packages/features/package.json ./packages/features/package.json
-COPY packages/kysely/package.json ./packages/kysely/package.json
-COPY packages/lib/package.json ./packages/lib/package.json
-COPY packages/trpc/package.json ./packages/trpc/package.json
-COPY packages/tsconfig/package.json ./packages/tsconfig/package.json
-COPY packages/types/package.json ./packages/types/package.json
-COPY packages/ui/package.json ./packages/ui/package.json
-COPY packages/debugging/package.json ./packages/debugging/package.json
-
-# Copy packages with subdirectories (contain multiple workspace packages)
-COPY packages/embeds ./packages/embeds
-COPY packages/platform ./packages/platform
-COPY packages/app-store ./packages/app-store
-
-# Install dependencies
-RUN yarn install --immutable
+# Install dependencies - remove immutable flag as lockfile may need updating
+RUN yarn install
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
