@@ -52,8 +52,8 @@ lerna-debug.log*
 # TypeScript
 *.tsbuildinfo
 
-# Git
-.git
+# Git (keep .git for version detection)
+# .git
 .gitignore
 .gitattributes
 

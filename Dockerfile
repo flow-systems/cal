@@ -12,8 +12,8 @@ RUN corepack enable && corepack prepare yarn@3.4.1 --activate
 # Copy entire source (needed for Yarn workspaces to resolve correctly)
 COPY . .
 
-# Install dependencies - remove immutable flag as lockfile may need updating
-RUN yarn install
+# Install all dependencies (including devDependencies needed for build)
+RUN yarn install --frozen-lockfile
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
@@ -27,6 +27,7 @@ RUN corepack enable && corepack prepare yarn@3.4.1 --activate
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=8192"
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV TURBO_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_CHECK=1
 
 # Copy dependencies from deps stage
