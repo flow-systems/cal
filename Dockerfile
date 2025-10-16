@@ -19,24 +19,27 @@ COPY apps/api/package.json ./apps/api/package.json
 COPY apps/api/v1/package.json ./apps/api/v1/package.json
 COPY apps/api/v2/package.json ./apps/api/v2/package.json
 
-# Copy workspace packages
+# Copy workspace packages (only top-level package.json files that exist)
 COPY packages/prisma/package.json ./packages/prisma/package.json
 COPY packages/app-store/package.json ./packages/app-store/package.json
 COPY packages/app-store-cli/package.json ./packages/app-store-cli/package.json
 COPY packages/config/package.json ./packages/config/package.json
 COPY packages/dayjs/package.json ./packages/dayjs/package.json
 COPY packages/emails/package.json ./packages/emails/package.json
-COPY packages/embeds/package.json ./packages/embeds/package.json
 COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
 COPY packages/eslint-plugin/package.json ./packages/eslint-plugin/package.json
 COPY packages/features/package.json ./packages/features/package.json
 COPY packages/kysely/package.json ./packages/kysely/package.json
 COPY packages/lib/package.json ./packages/lib/package.json
-COPY packages/platform/package.json ./packages/platform/package.json
 COPY packages/trpc/package.json ./packages/trpc/package.json
 COPY packages/tsconfig/package.json ./packages/tsconfig/package.json
 COPY packages/types/package.json ./packages/types/package.json
 COPY packages/ui/package.json ./packages/ui/package.json
+COPY packages/debugging/package.json ./packages/debugging/package.json
+
+# Copy packages with subdirectories
+COPY packages/embeds ./packages/embeds
+COPY packages/platform ./packages/platform
 
 # Install dependencies
 RUN yarn install --immutable
