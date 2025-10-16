@@ -30,13 +30,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV TURBO_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_CHECK=1
 
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/.yarn ./.yarn
-COPY --from=deps /app/.yarnrc.yml ./.yarnrc.yml
-
-# Copy source code
-COPY . .
+# Copy everything from deps stage (includes node_modules in all workspace packages)
+COPY --from=deps /app ./
 
 # Generate Prisma Client
 RUN yarn workspace @calcom/prisma prisma generate
