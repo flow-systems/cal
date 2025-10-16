@@ -12,7 +12,7 @@ Deploy Cal.com to your VPS with Coolify in under 15 minutes!
 
 ### 1️⃣ Create PostgreSQL Database
 
-1. In Coolify → **+ New Resource** → **Database** → **PostgreSQL 15**
+1. In Coolify → **+ New Resource** → **Database** → **PostgreSQL** (17 or 15+)
 2. Save the connection details shown
 3. Your `DATABASE_URL` will look like:
    ```

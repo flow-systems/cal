@@ -164,14 +164,14 @@ docker-compose -f docker-compose.coolify.yml exec calcom sh
 - **CPU**: 1 core
 - **RAM**: 2GB
 - **Disk**: 10GB
-- **Database**: PostgreSQL 13+
+- **Database**: PostgreSQL 13+ (17 or 15+ recommended)
 
 ### Recommended for Production
 
 - **CPU**: 2+ cores
 - **RAM**: 4GB+
 - **Disk**: 20GB+ (with backups)
-- **Database**: PostgreSQL 15+ with backups
+- **Database**: PostgreSQL 17 or 15+ with backups
 
 ## 🔐 Security Considerations
 

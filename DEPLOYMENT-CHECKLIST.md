@@ -21,7 +21,7 @@ Use this checklist to ensure a successful deployment.
 ## Deployment Steps
 
 ### 1. Database Setup
-- [ ] Created PostgreSQL 15 database in Coolify
+- [ ] Created PostgreSQL 17 (or 15+) database in Coolify
 - [ ] Saved database connection details
 - [ ] Constructed `DATABASE_URL` connection string
 - [ ] Tested database connectivity (optional but recommended)

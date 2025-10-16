@@ -95,7 +95,7 @@ openssl rand -base64 32  # CRON_API_KEY
 - **OS**: Any Linux with Docker support
 
 ### External Services
-- **PostgreSQL 13+** (can be hosted in Coolify)
+- **PostgreSQL 13+** (17 or 15+ recommended, can be hosted in Coolify)
 - **SMTP Server** (Gmail, SendGrid, etc.)
 - **Domain Name** (pointed to your VPS)
 

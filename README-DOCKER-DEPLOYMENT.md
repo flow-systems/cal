@@ -145,7 +145,7 @@ Visit `https://cal.yourdomain.com` 🎉
 - **OS**: Linux with Docker
 
 ### External Services
-- ✅ PostgreSQL 13+ database
+- ✅ PostgreSQL 13+ database (17 or 15+ recommended)
 - ✅ SMTP server (email)
 - ✅ Domain name with DNS
 
