@@ -86,6 +86,8 @@ COPY --from=builder /app/yarn.lock ./yarn.lock
 COPY --from=builder /app/.yarnrc.yml ./.yarnrc.yml
 COPY --from=builder /app/.yarn ./.yarn
 COPY --from=builder /app/turbo.json ./turbo.json
+COPY --from=builder /app/i18n.json ./i18n.json
+COPY --from=builder /app/i18n.lock ./i18n.lock
 
 # Copy workspace packages
 COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
