@@ -21,7 +21,6 @@ COPY apps/api/v2/package.json ./apps/api/v2/package.json
 
 # Copy workspace packages (only top-level package.json files that exist)
 COPY packages/prisma/package.json ./packages/prisma/package.json
-COPY packages/app-store/package.json ./packages/app-store/package.json
 COPY packages/app-store-cli/package.json ./packages/app-store-cli/package.json
 COPY packages/config/package.json ./packages/config/package.json
 COPY packages/dayjs/package.json ./packages/dayjs/package.json
@@ -37,9 +36,10 @@ COPY packages/types/package.json ./packages/types/package.json
 COPY packages/ui/package.json ./packages/ui/package.json
 COPY packages/debugging/package.json ./packages/debugging/package.json
 
-# Copy packages with subdirectories
+# Copy packages with subdirectories (contain multiple workspace packages)
 COPY packages/embeds ./packages/embeds
 COPY packages/platform ./packages/platform
+COPY packages/app-store ./packages/app-store
 
 # Install dependencies
 RUN yarn install --immutable
