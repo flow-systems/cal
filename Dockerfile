@@ -56,8 +56,9 @@ COPY --from=deps /app ./
 RUN yarn workspace @calcom/prisma prisma generate
 
 # Remove test files that may cause TypeScript compilation issues
-RUN find . -type d -name "test" -o -name "tests" -o -name "__tests__" | grep -v node_modules | xargs rm -rf || true
-RUN find . -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" -o -name "*.spec.tsx" | grep -v node_modules | xargs rm -f || true
+RUN find . -path "*/node_modules" -prune -o -type d \( -name "test" -o -name "tests" -o -name "__tests__" -o -name "playwright" -o -name "fixtures" \) -print -exec rm -rf {} + 2>/dev/null || true
+RUN find . -path "*/node_modules" -prune -o -type f \( -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" -o -name "*.spec.tsx" -o -name "*.e2e.ts" \) -print -delete 2>/dev/null || true
+RUN rm -rf ./apps/web/test ./apps/web/playwright ./tests ./playwright.config.ts ./vitest.config.ts ./vitest.workspace.ts ./setupVitest.ts 2>/dev/null || true
 
 # Build the application
 RUN yarn turbo run build --filter=@calcom/web...

@@ -65,20 +65,33 @@ lerna-debug.log*
 !README.md
 docs
 
-# Tests
+# Tests - exclude all test-related files
 __tests__
+**/__tests__
+test
+tests
+**/test
+**/tests
 **/*.test.ts
 **/*.test.tsx
 **/*.spec.ts
 **/*.spec.tsx
-**/test/**
-**/tests/**
+**/*.test.js
+**/*.test.jsx
+**/*.spec.js
+**/*.spec.jsx
+**/fixtures
+**/*fixture*
+**/playwright
 playwright
 playwright.config.ts
 e2e
+**/*.e2e.ts
 vitest.config.ts
 vitest.workspace.ts
 setupVitest.ts
+**/test-*
+**/*-test.*
 
 # CI/CD
 .circleci
