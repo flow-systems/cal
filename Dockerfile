@@ -55,6 +55,10 @@ COPY --from=deps /app ./
 # Generate Prisma Client
 RUN yarn workspace @calcom/prisma prisma generate
 
+# Remove test files that may cause TypeScript compilation issues
+RUN find . -type d -name "test" -o -name "tests" -o -name "__tests__" | grep -v node_modules | xargs rm -rf || true
+RUN find . -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" -o -name "*.spec.tsx" | grep -v node_modules | xargs rm -f || true
+
 # Build the application
 RUN yarn turbo run build --filter=@calcom/web...
 

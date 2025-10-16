@@ -71,8 +71,14 @@ __tests__
 **/*.test.tsx
 **/*.spec.ts
 **/*.spec.tsx
+**/test/**
+**/tests/**
 playwright
+playwright.config.ts
 e2e
+vitest.config.ts
+vitest.workspace.ts
+setupVitest.ts
 
 # CI/CD
 .circleci
