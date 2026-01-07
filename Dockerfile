@@ -24,10 +24,13 @@ WORKDIR /app
 RUN corepack enable && corepack prepare yarn@3.4.1 --activate
 
 # Accept build arguments from Coolify/Dokploy
+# Required arguments (must be provided during build)
 ARG NEXTAUTH_SECRET
 ARG CALENDSO_ENCRYPTION_KEY
 ARG DATABASE_URL
 ARG NEXT_PUBLIC_WEBAPP_URL
+
+# Optional arguments
 ARG NEXT_PUBLIC_WEBSITE_URL
 ARG EMAIL_FROM
 ARG EMAIL_SERVER_HOST
@@ -43,11 +46,35 @@ ENV TURBO_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_CHECK=1
 
 # Set required environment variables for build
+# These must be provided as build arguments (--build-arg NEXTAUTH_SECRET=...)
 ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 ENV CALENDSO_ENCRYPTION_KEY=${CALENDSO_ENCRYPTION_KEY}
 ENV DATABASE_URL=${DATABASE_URL}
 ENV NEXT_PUBLIC_WEBAPP_URL=${NEXT_PUBLIC_WEBAPP_URL}
 ENV NEXT_PUBLIC_WEBSITE_URL=${NEXT_PUBLIC_WEBSITE_URL}
+
+# Validate required environment variables before build
+RUN if [ -z "$NEXTAUTH_SECRET" ] || [ "$NEXTAUTH_SECRET" = "" ]; then \
+      echo "ERROR: NEXTAUTH_SECRET environment variable is required but not set" >&2; \
+      echo "Please provide it as a build argument: --build-arg NEXTAUTH_SECRET=your-secret" >&2; \
+      exit 1; \
+    fi && \
+    if [ -z "$CALENDSO_ENCRYPTION_KEY" ] || [ "$CALENDSO_ENCRYPTION_KEY" = "" ]; then \
+      echo "ERROR: CALENDSO_ENCRYPTION_KEY environment variable is required but not set" >&2; \
+      echo "Please provide it as a build argument: --build-arg CALENDSO_ENCRYPTION_KEY=your-key" >&2; \
+      exit 1; \
+    fi && \
+    if [ -z "$DATABASE_URL" ] || [ "$DATABASE_URL" = "" ]; then \
+      echo "ERROR: DATABASE_URL environment variable is required but not set" >&2; \
+      echo "Please provide it as a build argument: --build-arg DATABASE_URL=your-url" >&2; \
+      exit 1; \
+    fi && \
+    if [ -z "$NEXT_PUBLIC_WEBAPP_URL" ] || [ "$NEXT_PUBLIC_WEBAPP_URL" = "" ]; then \
+      echo "ERROR: NEXT_PUBLIC_WEBAPP_URL environment variable is required but not set" >&2; \
+      echo "Please provide it as a build argument: --build-arg NEXT_PUBLIC_WEBAPP_URL=your-url" >&2; \
+      exit 1; \
+    fi && \
+    echo "✓ All required environment variables are set"
 
 # Copy everything from deps stage (includes node_modules in all workspace packages)
 COPY --from=deps /app ./
