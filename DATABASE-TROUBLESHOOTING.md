@@ -202,6 +202,34 @@ If database is on a different Docker network:
 - [ ] Firewall allows connections (if external database)
 - [ ] SSL mode is set if required (`?sslmode=require`)
 
+## Dokploy Database Startup Issues
+
+### Common Error: Database Won't Start
+
+If you get an error when trying to "start" the database in Dokploy:
+
+**Possible causes:**
+1. **Port already in use**: Another service might be using port 5432
+2. **Volume/permissions issue**: Database data directory might have permission problems
+3. **Resource constraints**: Not enough memory/disk space
+4. **Configuration error**: Invalid environment variables (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB)
+
+**Solutions:**
+1. **Check if port 5432 is available**: Look for other PostgreSQL services
+2. **Check Dokploy logs**: View database service logs for specific error
+3. **Verify environment variables**: Ensure POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB are set
+4. **Check resources**: Ensure Dokploy has enough memory/disk
+5. **Try recreating**: Delete and recreate the database service
+
+**Note**: The database doesn't need to be "started" separately if it's configured as a dependency. Dokploy should start it automatically when your Cal.com app starts (if configured with `depends_on`).
+
+### Database Already Running
+
+If Dokploy says the database is already running but you can't connect:
+- Check the actual service status in Dokploy dashboard
+- Verify the service name matches your DATABASE_URL host
+- Check if database is on a different network
+
 ## Still Not Working?
 
 1. **Check Cal.com container logs** in Dokploy for detailed error messages
@@ -211,6 +239,7 @@ If database is on a different Docker network:
    ```bash
    docker exec <container> env | grep DATABASE_URL
    ```
+5. **Check Dokploy database service logs** for startup errors
 
 ## Example Working Configuration
 
