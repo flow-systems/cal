@@ -24,7 +24,8 @@ WORKDIR /app
 RUN corepack enable && corepack prepare yarn@3.4.1 --activate
 
 # Accept build arguments from Coolify/Dokploy
-# Required arguments (must be provided during build)
+# NOTE: Dokploy must pass these as build arguments (--build-arg)
+# If variables are set in Dokploy but not passed as build args, the build will fail
 ARG NEXTAUTH_SECRET
 ARG CALENDSO_ENCRYPTION_KEY
 ARG DATABASE_URL
@@ -45,8 +46,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV TURBO_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_CHECK=1
 
-# Set required environment variables for build
-# These must be provided as build arguments (--build-arg NEXTAUTH_SECRET=...)
+# Set required environment variables for build from ARG values
 ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 ENV CALENDSO_ENCRYPTION_KEY=${CALENDSO_ENCRYPTION_KEY}
 ENV DATABASE_URL=${DATABASE_URL}
@@ -54,27 +54,39 @@ ENV NEXT_PUBLIC_WEBAPP_URL=${NEXT_PUBLIC_WEBAPP_URL}
 ENV NEXT_PUBLIC_WEBSITE_URL=${NEXT_PUBLIC_WEBSITE_URL}
 
 # Validate required environment variables before build
-RUN if [ -z "$NEXTAUTH_SECRET" ] || [ "$NEXTAUTH_SECRET" = "" ]; then \
-      echo "ERROR: NEXTAUTH_SECRET environment variable is required but not set" >&2; \
-      echo "Please provide it as a build argument: --build-arg NEXTAUTH_SECRET=your-secret" >&2; \
+# This will fail early with clear error messages
+RUN echo "Validating required build arguments..." && \
+    if [ -z "${NEXTAUTH_SECRET}" ] || [ "${NEXTAUTH_SECRET}" = "" ]; then \
+      echo "" >&2; \
+      echo "❌ ERROR: NEXTAUTH_SECRET is required but not set" >&2; \
+      echo "" >&2; \
+      echo "In Dokploy, you need to configure these as BUILD ARGUMENTS, not just environment variables." >&2; \
+      echo "Check your Dokploy project settings for 'Build Arguments' or 'Docker Build Args' section." >&2; \
+      echo "" >&2; \
+      echo "Required build arguments:" >&2; \
+      echo "  - NEXTAUTH_SECRET" >&2; \
+      echo "  - CALENDSO_ENCRYPTION_KEY" >&2; \
+      echo "  - DATABASE_URL" >&2; \
+      echo "  - NEXT_PUBLIC_WEBAPP_URL" >&2; \
+      echo "" >&2; \
       exit 1; \
     fi && \
-    if [ -z "$CALENDSO_ENCRYPTION_KEY" ] || [ "$CALENDSO_ENCRYPTION_KEY" = "" ]; then \
-      echo "ERROR: CALENDSO_ENCRYPTION_KEY environment variable is required but not set" >&2; \
-      echo "Please provide it as a build argument: --build-arg CALENDSO_ENCRYPTION_KEY=your-key" >&2; \
+    if [ -z "${CALENDSO_ENCRYPTION_KEY}" ] || [ "${CALENDSO_ENCRYPTION_KEY}" = "" ]; then \
+      echo "❌ ERROR: CALENDSO_ENCRYPTION_KEY is required but not set" >&2; \
+      echo "Configure it as a BUILD ARGUMENT in Dokploy settings" >&2; \
       exit 1; \
     fi && \
-    if [ -z "$DATABASE_URL" ] || [ "$DATABASE_URL" = "" ]; then \
-      echo "ERROR: DATABASE_URL environment variable is required but not set" >&2; \
-      echo "Please provide it as a build argument: --build-arg DATABASE_URL=your-url" >&2; \
+    if [ -z "${DATABASE_URL}" ] || [ "${DATABASE_URL}" = "" ]; then \
+      echo "❌ ERROR: DATABASE_URL is required but not set" >&2; \
+      echo "Configure it as a BUILD ARGUMENT in Dokploy settings" >&2; \
       exit 1; \
     fi && \
-    if [ -z "$NEXT_PUBLIC_WEBAPP_URL" ] || [ "$NEXT_PUBLIC_WEBAPP_URL" = "" ]; then \
-      echo "ERROR: NEXT_PUBLIC_WEBAPP_URL environment variable is required but not set" >&2; \
-      echo "Please provide it as a build argument: --build-arg NEXT_PUBLIC_WEBAPP_URL=your-url" >&2; \
+    if [ -z "${NEXT_PUBLIC_WEBAPP_URL}" ] || [ "${NEXT_PUBLIC_WEBAPP_URL}" = "" ]; then \
+      echo "❌ ERROR: NEXT_PUBLIC_WEBAPP_URL is required but not set" >&2; \
+      echo "Configure it as a BUILD ARGUMENT in Dokploy settings" >&2; \
       exit 1; \
     fi && \
-    echo "✓ All required environment variables are set"
+    echo "✓ All required build arguments are set"
 
 # Copy everything from deps stage (includes node_modules in all workspace packages)
 COPY --from=deps /app ./

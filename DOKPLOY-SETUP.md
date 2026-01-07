@@ -22,13 +22,22 @@ The Dockerfile requires the following build arguments to be set during the build
 
 ## Setting Build Arguments in Dokploy
 
-### Method 1: Environment Variables (Recommended)
+### ⚠️ Important: Build Arguments vs Environment Variables
 
-In your Dokploy project settings, add these as **Environment Variables**. Dokploy will automatically pass them as build arguments:
+Dokploy has two separate concepts:
+- **Environment Variables**: Available at runtime (when container runs)
+- **Build Arguments**: Available during Docker build (when image is built)
+
+**You need to set these as BUILD ARGUMENTS, not just environment variables!**
+
+### Method 1: Build Arguments (Required)
+
+In Dokploy, you need to configure these in the **Build Arguments** or **Docker Build Args** section:
 
 1. Go to your project in Dokploy
-2. Navigate to **Environment Variables** or **Build Settings**
-3. Add the following variables:
+2. Navigate to **Build Settings** or **Dockerfile Settings**
+3. Look for **"Build Arguments"**, **"Docker Build Args"**, or **"Build-time Variables"**
+4. Add the following build arguments:
 
 ```
 NEXTAUTH_SECRET=your-secret-here
@@ -37,18 +46,29 @@ DATABASE_URL=postgresql://user:password@host:5432/database
 NEXT_PUBLIC_WEBAPP_URL=https://cal.yourdomain.com
 ```
 
-### Method 2: Build Arguments
+### Method 2: If Dokploy Auto-Passes Environment Variables
 
-If Dokploy has a specific "Build Arguments" section:
+Some Dokploy configurations automatically pass environment variables as build arguments. If your Dokploy setup does this:
 
-1. Go to **Build Settings** or **Dockerfile Settings**
-2. Add build arguments:
+1. Go to **Environment Variables** section
+2. Ensure these variables are set:
+   - `NEXTAUTH_SECRET`
+   - `CALENDSO_ENCRYPTION_KEY`
+   - `DATABASE_URL`
+   - `NEXT_PUBLIC_WEBAPP_URL`
+3. Check if there's a toggle like **"Available during build"** or **"Pass as build arg"** and enable it
 
-```
---build-arg NEXTAUTH_SECRET=your-secret-here
---build-arg CALENDSO_ENCRYPTION_KEY=your-encryption-key-here
---build-arg DATABASE_URL=postgresql://user:password@host:5432/database
---build-arg NEXT_PUBLIC_WEBAPP_URL=https://cal.yourdomain.com
+### Method 3: Manual Dockerfile Build Args (Advanced)
+
+If Dokploy allows custom Docker build commands, you can specify:
+
+```bash
+docker build \
+  --build-arg NEXTAUTH_SECRET=your-secret \
+  --build-arg CALENDSO_ENCRYPTION_KEY=your-key \
+  --build-arg DATABASE_URL=postgresql://... \
+  --build-arg NEXT_PUBLIC_WEBAPP_URL=https://... \
+  -t your-image .
 ```
 
 ## Generating Secrets
@@ -82,24 +102,42 @@ In addition to build arguments, you'll also need these at runtime (set in Dokplo
 
 ## Troubleshooting
 
-### Error: "Please set NEXTAUTH_SECRET"
+### Error: "Please set NEXTAUTH_SECRET" or "NEXTAUTH_SECRET is required but not set"
 
-This means the build argument wasn't passed. Check:
-1. Environment variables are set in Dokploy project settings
-2. Variables are marked as "Available during build" if Dokploy has that option
-3. Variable names match exactly (case-sensitive)
+**This is the most common issue!** It means Dokploy has the variables set, but they're not being passed as build arguments.
+
+**Solution:**
+1. **Check Dokploy Build Settings**: Look for a "Build Arguments" or "Docker Build Args" section (separate from Environment Variables)
+2. **Check if Dokploy auto-passes env vars**: Some Dokploy versions have a setting like "Pass environment variables as build arguments" - enable it
+3. **Verify in build logs**: Check the Docker build command in Dokploy logs. You should see `--build-arg NEXTAUTH_SECRET=...` in the command
+4. **Manual configuration**: If Dokploy doesn't auto-pass, you may need to manually configure build arguments in the Dockerfile/build settings
+
+### Variables are set but build still fails
+
+If you've set the variables in Dokploy but the build fails:
+
+1. **Check variable names**: They must match exactly (case-sensitive):
+   - `NEXTAUTH_SECRET` (not `NEXTAUTH_SECRET_KEY` or `NEXT_AUTH_SECRET`)
+   - `CALENDSO_ENCRYPTION_KEY` (not `ENCRYPTION_KEY`)
+   - `DATABASE_URL` (not `DB_URL` or `POSTGRES_URL`)
+   - `NEXT_PUBLIC_WEBAPP_URL` (not `WEBAPP_URL`)
+
+2. **Check if they're runtime-only**: Some platforms separate "Build-time" and "Runtime" variables. Make sure they're set for build-time.
+
+3. **Check Dokploy version**: Newer versions of Dokploy may handle this differently. Check Dokploy documentation for your version.
 
 ### Build Fails with Validation Error
 
 The Dockerfile now validates required arguments early. If you see:
 ```
-ERROR: NEXTAUTH_SECRET environment variable is required but not set
+❌ ERROR: NEXTAUTH_SECRET is required but not set
+Configure it as a BUILD ARGUMENT in Dokploy settings
 ```
 
-This means Dokploy isn't passing the variable as a build argument. Ensure:
-1. Variable is set in Dokploy project settings
-2. Variable is available during build phase (not just runtime)
-3. Check Dokploy logs for the actual build command being used
+This means:
+- The variable exists in Dokploy but isn't being passed to Docker build
+- You need to configure it as a **build argument**, not just an environment variable
+- Check Dokploy's build configuration section
 
 ### Database Connection Issues
 
