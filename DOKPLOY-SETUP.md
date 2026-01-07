@@ -94,10 +94,31 @@ Make sure your PostgreSQL database is:
 
 In addition to build arguments, you'll also need these at runtime (set in Dokploy's environment variables):
 
+### Required Runtime Variables
 - `NEXTAUTH_SECRET` (same as build arg)
 - `CALENDSO_ENCRYPTION_KEY` (same as build arg)
-- `DATABASE_URL` (same as build arg)
-- `NEXT_PUBLIC_WEBAPP_URL` (same as build arg)
+- `DATABASE_URL` (same as build arg) - **Must be accessible from container network**
+- `NEXT_PUBLIC_WEBAPP_URL` (same as build arg) - Your full Cal.com URL, e.g., `https://meet.ai-in-action.de`
+
+### Important: ALLOWED_HOSTNAMES
+
+**This is critical for organization support!** Set this to your base domain (without subdomain):
+
+If your `NEXT_PUBLIC_WEBAPP_URL` is `https://meet.ai-in-action.de`, then:
+```
+ALLOWED_HOSTNAMES=ai-in-action.de
+```
+
+If you're using multiple domains:
+```
+ALLOWED_HOSTNAMES=ai-in-action.de,another-domain.com
+```
+
+**Without this, you'll see warnings: "Match of WEBAPP_URL with ALLOWED_HOSTNAMES failed"**
+
+### Other Common Runtime Variables
+- `NEXT_PUBLIC_WEBSITE_URL` - Your website URL (if different from webapp)
+- `EMAIL_FROM`, `EMAIL_SERVER_HOST`, etc. - For email functionality
 - Any other Cal.com environment variables from `.env.example`
 
 ## Troubleshooting
@@ -139,13 +160,46 @@ This means:
 - You need to configure it as a **build argument**, not just an environment variable
 - Check Dokploy's build configuration section
 
-### Database Connection Issues
+### Database Connection Issues (P1001 Error)
 
-If the build succeeds but runtime fails with database errors:
-1. Verify `DATABASE_URL` is correct
-2. Check database is accessible from Dokploy's network
-3. Ensure database user has proper permissions
-4. Check if database requires SSL (add `?sslmode=require` to connection string)
+If you see Prisma error `P1001` (Can't reach database server):
+
+1. **Verify DATABASE_URL format**: Should be `postgresql://user:password@host:port/database`
+   - If database is in same Docker network, use service name as host
+   - If external database, use IP or domain name
+   - Check if port is correct (default: 5432)
+
+2. **Network connectivity**:
+   - If database is in Dokploy, ensure it's on the same network
+   - If external database, check firewall rules allow connections from Dokploy
+   - Test connection from Dokploy container: `docker exec -it <container> nc -zv <db-host> 5432`
+
+3. **Database credentials**:
+   - Verify username and password are correct
+   - Check database user has proper permissions
+   - Ensure database exists
+
+4. **SSL/TLS**:
+   - If database requires SSL, add `?sslmode=require` to connection string
+   - Example: `postgresql://user:pass@host:5432/db?sslmode=require`
+
+5. **Connection pooling**:
+   - For some setups, you may need `DATABASE_DIRECT_URL` (same as DATABASE_URL)
+   - Some setups require separate read/write URLs
+
+### ALLOWED_HOSTNAMES Warning
+
+If you see: `"Match of WEBAPP_URL with ALLOWED_HOSTNAMES failed"`
+
+**Solution**: Set `ALLOWED_HOSTNAMES` environment variable to your base domain:
+
+```
+ALLOWED_HOSTNAMES=ai-in-action.de
+```
+
+- Extract the base domain from your `NEXT_PUBLIC_WEBAPP_URL`
+- If `NEXT_PUBLIC_WEBAPP_URL=https://meet.ai-in-action.de`, then `ALLOWED_HOSTNAMES=ai-in-action.de`
+- If using multiple domains, use comma-separated: `ALLOWED_HOSTNAMES=domain1.com,domain2.com`
 
 ## Example Dokploy Configuration
 
