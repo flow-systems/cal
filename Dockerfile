@@ -1,4 +1,4 @@
-# Cal.com Production Dockerfile for Coolify
+# Cal.com Production Dockerfile for Coolify/Dokploy
 # Multi-stage build for optimal image size and security
 
 # Stage 1: Dependencies
@@ -23,7 +23,7 @@ WORKDIR /app
 # Enable Corepack
 RUN corepack enable && corepack prepare yarn@3.4.1 --activate
 
-# Accept build arguments from Coolify
+# Accept build arguments from Coolify/Dokploy
 ARG NEXTAUTH_SECRET
 ARG CALENDSO_ENCRYPTION_KEY
 ARG DATABASE_URL
@@ -86,6 +86,7 @@ COPY --from=builder /app/yarn.lock ./yarn.lock
 COPY --from=builder /app/.yarnrc.yml ./.yarnrc.yml
 COPY --from=builder /app/.yarn ./.yarn
 COPY --from=builder /app/turbo.json ./turbo.json
+# Copy i18n files required by packages/config/next-i18next.config.js
 COPY --from=builder /app/i18n.json ./i18n.json
 COPY --from=builder /app/i18n.lock ./i18n.lock
 
@@ -112,4 +113,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 
 # Start the application using dumb-init for proper signal handling
 CMD ["dumb-init", "yarn", "workspace", "@calcom/web", "start"]
-

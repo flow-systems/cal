@@ -1,5 +1,6 @@
 # Dependencies
 node_modules
+**/node_modules
 .pnp
 .pnp.js
 .yarn/cache
@@ -8,23 +9,30 @@ node_modules
 
 # Testing
 coverage
+**/coverage
 .nyc_output
 playwright-report
 test-results
+**/test-results
 
 # Next.js
 .next
+**/.next
 out
 *.tsbuildinfo
 next-env.d.ts
 
 # Production
 build
+**/build
 dist
+**/dist
 .turbo
+**/.turbo
 
 # Misc
 .DS_Store
+Thumbs.db
 *.pem
 .vscode
 .idea
@@ -117,4 +125,3 @@ temp
 *.swp
 *.swo
 *~
-
