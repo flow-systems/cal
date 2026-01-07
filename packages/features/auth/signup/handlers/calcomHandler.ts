@@ -7,21 +7,24 @@ import { sendEmailVerification } from "@calcom/features/auth/lib/verifyEmail";
 import { createOrUpdateMemberships } from "@calcom/features/auth/signup/utils/createOrUpdateMemberships";
 import { prefillAvatar } from "@calcom/features/auth/signup/utils/prefillAvatar";
 import { validateAndGetCorrectedUsernameAndEmail } from "@calcom/features/auth/signup/utils/validateUsername";
-import { StripeBillingService } from "@calcom/features/ee/billing/stripe-billing-service";
+import { getBillingProviderService } from "@calcom/features/ee/billing/di/containers/Billing";
 import { sentrySpan } from "@calcom/features/watchlist/lib/telemetry";
 import { checkIfEmailIsBlockedInWatchlistController } from "@calcom/features/watchlist/operations/check-if-email-in-watchlist.controller";
 import { hashPassword } from "@calcom/lib/auth/hashPassword";
 import { WEBAPP_URL } from "@calcom/lib/constants";
 import { HttpError } from "@calcom/lib/http-error";
 import logger from "@calcom/lib/logger";
+import { isPrismaError } from "@calcom/lib/server/getServerErrorFromUnknown";
 import type { CustomNextApiHandler } from "@calcom/lib/server/username";
 import { usernameHandler } from "@calcom/lib/server/username";
-import { prisma } from "@calcom/prisma";
+import { getTrackingFromCookies } from "@calcom/lib/tracking";
+import prisma from "@calcom/prisma";
 import { CreationSource } from "@calcom/prisma/enums";
 import { IdentityProvider } from "@calcom/prisma/enums";
 import { signupSchema } from "@calcom/prisma/zod-utils";
 import { buildLegacyRequest } from "@calcom/web/lib/buildLegacyCtx";
 
+import { SIGNUP_ERROR_CODES } from "../constants";
 import { joinAnyChildTeamOnOrgInvite } from "../utils/organization";
 import {
   findTokenByToken,
@@ -44,7 +47,7 @@ const handler: CustomNextApiHandler = async (body, usernameStatus) => {
     })
     .parse(body);
 
-  const billingService = new StripeBillingService();
+  const billingService = getBillingProviderService();
 
   const shouldLockByDefault = await checkIfEmailIsBlockedInWatchlistController({
     email: _email,
@@ -82,6 +85,16 @@ const handler: CustomNextApiHandler = async (body, usernameStatus) => {
       teamId: foundToken?.teamId ?? null,
       isSignup: true,
     });
+
+    if (foundToken?.teamId) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+        select: { invitedTo: true },
+      });
+      if (existingUser && existingUser.invitedTo !== foundToken.teamId) {
+        return NextResponse.json({ message: SIGNUP_ERROR_CODES.USER_ALREADY_EXISTS }, { status: 409 });
+      }
+    }
   } else {
     const usernameAndEmailValidation = await validateAndGetCorrectedUsernameAndEmail({
       username,
@@ -105,13 +118,24 @@ const handler: CustomNextApiHandler = async (body, usernameStatus) => {
     username = usernameAndEmailValidation.username;
   }
 
-  // Create the customer in Stripe
+  // Create the customer in Stripe with ad tracking metadata
+  const cookieStore = await cookies();
+  const cookiesObj = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
+  const tracking = getTrackingFromCookies(cookiesObj);
 
   const customer = await billingService.createCustomer({
     email,
     metadata: {
       email /* Stripe customer email can be changed, so we add this to keep track of which email was used to signup */,
       username,
+      ...(tracking.googleAds?.gclid && {
+        gclid: tracking.googleAds.gclid,
+        campaignId: tracking.googleAds.campaignId,
+      }),
+      ...(tracking.linkedInAds?.liFatId && {
+        liFatId: tracking.linkedInAds.liFatId,
+        linkedInCampaignId: tracking.linkedInAds.campaignId,
+      }),
     },
   });
 
@@ -154,27 +178,58 @@ const handler: CustomNextApiHandler = async (body, usernameStatus) => {
       },
     });
     if (team) {
-      const user = await prisma.user.upsert({
-        where: { email },
-        update: {
-          username,
-          emailVerified: new Date(Date.now()),
-          identityProvider: IdentityProvider.CAL,
-          password: {
-            upsert: {
-              create: { hash: hashedPassword },
-              update: { hash: hashedPassword },
-            },
+      const organizationId = team.isOrganization ? team.id : team.parent?.id ?? null;
+
+      if (username) {
+        const existingUserByUsername = await prisma.user.findFirst({
+          where: {
+            username,
+            organizationId,
+            NOT: { email },
           },
-        },
-        create: {
-          username,
-          email,
-          identityProvider: IdentityProvider.CAL,
-          password: { create: { hash: hashedPassword } },
-        },
-      });
-      // Wrapping in a transaction as if one fails we want to rollback the whole thing to preventa any data inconsistencies
+          select: { id: true },
+        });
+        if (existingUserByUsername) {
+          return NextResponse.json({ message: SIGNUP_ERROR_CODES.USER_ALREADY_EXISTS }, { status: 409 });
+        }
+      }
+
+      let user: { id: number };
+      try {
+        user = await prisma.user.upsert({
+          where: { email },
+          update: {
+            username,
+            emailVerified: new Date(Date.now()),
+            identityProvider: IdentityProvider.CAL,
+            password: {
+              upsert: {
+                create: { hash: hashedPassword },
+                update: { hash: hashedPassword },
+              },
+            },
+            organizationId,
+          },
+          create: {
+            username,
+            email,
+            emailVerified: new Date(Date.now()),
+            identityProvider: IdentityProvider.CAL,
+            password: { create: { hash: hashedPassword } },
+            organizationId,
+          },
+          select: { id: true },
+        });
+      } catch (error) {
+        if (isPrismaError(error) && error.code === "P2002") {
+          const target = String(error.meta?.target ?? "");
+          if (target.includes("email") || target.includes("username")) {
+            return NextResponse.json({ message: SIGNUP_ERROR_CODES.USER_ALREADY_EXISTS }, { status: 409 });
+          }
+        }
+        throw error;
+      }
+
       await createOrUpdateMemberships({
         user,
         team,
@@ -197,27 +252,45 @@ const handler: CustomNextApiHandler = async (body, usernameStatus) => {
     });
   } else {
     // Create the user
-    await prisma.user.create({
-      data: {
-        username,
-        email,
-        locked: shouldLockByDefault,
-        password: { create: { hash: hashedPassword } },
-        metadata: {
-          stripeCustomerId: customer.stripeCustomerId,
-          checkoutSessionId,
+    try {
+      await prisma.user.create({
+        data: {
+          username,
+          email,
+          locked: shouldLockByDefault,
+          password: { create: { hash: hashedPassword } },
+          metadata: {
+            stripeCustomerId: customer.stripeCustomerId,
+            checkoutSessionId,
+          },
+          creationSource: CreationSource.WEBAPP,
         },
-        creationSource: CreationSource.WEBAPP,
-      },
-    });
+      });
+    } catch (error) {
+      // Fallback for race conditions where user was created between our check and create
+      if (isPrismaError(error) && error.code === "P2002") {
+        const target = String(error.meta?.target ?? "");
+        if (target.includes("email") || target.includes("username")) {
+          return NextResponse.json(
+            { message: SIGNUP_ERROR_CODES.USER_ALREADY_EXISTS },
+            { status: 409 }
+          );
+        }
+      }
+      throw error;
+    }
     if (process.env.AVATARAPI_USERNAME && process.env.AVATARAPI_PASSWORD) {
       await prefillAvatar({ email });
     }
-    sendEmailVerification({
-      email,
-      language: await getLocaleFromRequest(buildLegacyRequest(await headers(), await cookies())),
-      username: username || "",
-    });
+    // Only send verification email for non-premium usernames
+    // Premium usernames will get a magic link after payment in paymentCallback
+    if (!checkoutSessionId) {
+      sendEmailVerification({
+        email,
+        language: await getLocaleFromRequest(buildLegacyRequest(await headers(), await cookies())),
+        username: username || "",
+      });
+    }
   }
 
   if (checkoutSessionId) {

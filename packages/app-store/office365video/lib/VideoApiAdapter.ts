@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { triggerDelegationCredentialErrorWebhook } from "@calcom/features/webhooks/lib/triggerDelegationCredentialErrorWebhook";
+import logger from "@calcom/lib/logger";
 import {
   CalendarAppDelegationCredentialConfigurationError,
   CalendarAppDelegationCredentialInvalidGrantError,
@@ -38,9 +39,26 @@ const getO365VideoAppKeys = async () => {
 };
 
 const TeamsVideoApiAdapter = (credential: CredentialForCalendarServiceWithTenantId): VideoApiAdapter => {
-  console.log("TeamsVideoApiAdapter--credential: ", credential);
   let azureUserId: string | null;
   const tokenResponse = oAuthManagerHelper.getTokenObjectFromCredential(credential);
+
+  async function triggerDelegationCredentialError(error: Error): Promise<void> {
+    if (credential.userId && credential.user && credential.appId && credential.delegatedToId) {
+      await triggerDelegationCredentialErrorWebhook({
+        error,
+        credential: {
+          id: credential.id,
+          type: credential.type,
+          appId: credential.appId,
+        },
+        user: {
+          id: credential.userId ?? 0,
+          email: credential.user.email,
+        },
+        delegationCredentialId: credential.delegatedToId,
+      });
+    }
+  }
 
   const auth = new OAuthManager({
     credentialSyncVariables: oAuthManagerHelper.credentialSyncVariables,
@@ -68,21 +86,7 @@ const TeamsVideoApiAdapter = (credential: CredentialForCalendarServiceWithTenant
           "Delegation credential without clientId or Secret"
         );
 
-        if (credential.userId && credential.user && credential.appId) {
-          await triggerDelegationCredentialErrorWebhook({
-            error,
-            credential: {
-              id: credential.id,
-              type: credential.type,
-              appId: credential.appId,
-            },
-            user: {
-              id: credential.userId ?? 0,
-              email: credential.user.email,
-            },
-            orgId: credential.teamId,
-          });
-        }
+        await triggerDelegationCredentialError(error);
 
         throw error;
       }
@@ -130,21 +134,7 @@ const TeamsVideoApiAdapter = (credential: CredentialForCalendarServiceWithTenant
           "Invalid DelegationCredential Settings: tenantId is missing"
         );
 
-        if (credential.userId && credential.user && credential.appId) {
-          await triggerDelegationCredentialErrorWebhook({
-            error,
-            credential: {
-              id: credential.id,
-              type: credential.type,
-              appId: credential.appId,
-            },
-            user: {
-              id: credential.userId ?? 0,
-              email: credential.user.email,
-            },
-            orgId: credential.teamId,
-          });
-        }
+        await triggerDelegationCredentialError(error);
 
         throw error;
       }
@@ -179,21 +169,7 @@ const TeamsVideoApiAdapter = (credential: CredentialForCalendarServiceWithTenant
         "Delegation credential without clientId or Secret"
       );
 
-      if (credential.userId && credential.user && credential.appId) {
-        await triggerDelegationCredentialErrorWebhook({
-          error,
-          credential: {
-            id: credential.id,
-            type: credential.type,
-            appId: credential.appId,
-          },
-          user: {
-            id: credential.userId ?? 0,
-            email: credential.user.email,
-          },
-          orgId: credential.teamId,
-        });
-      }
+      await triggerDelegationCredentialError(error);
 
       throw error;
     }
@@ -231,21 +207,7 @@ const TeamsVideoApiAdapter = (credential: CredentialForCalendarServiceWithTenant
         "User might not exist in Microsoft Azure Active Directory"
       );
 
-      if (credential.userId && credential.user && credential.appId) {
-        await triggerDelegationCredentialErrorWebhook({
-          error,
-          credential: {
-            id: credential.id,
-            type: credential.type,
-            appId: credential.appId,
-          },
-          user: {
-            id: credential.userId ?? 0,
-            email: credential.user.email,
-          },
-          orgId: credential.teamId,
-        });
-      }
+      await triggerDelegationCredentialError(error);
 
       throw error;
     }
@@ -289,11 +251,7 @@ const TeamsVideoApiAdapter = (credential: CredentialForCalendarServiceWithTenant
       return Promise.resolve([]);
     },
     createMeeting: async (event: CalendarEvent): Promise<VideoCallData> => {
-      console.log("=======>createMeeting: ");
-
       const url = `${await getUserEndpoint()}/onlineMeetings`;
-      console.log("urllllllllllll: ", url);
-      console.log("translateEvent(event): ", translateEvent(event));
       const resultString = await auth
         .requestRaw({
           url,
@@ -309,9 +267,11 @@ const TeamsVideoApiAdapter = (credential: CredentialForCalendarServiceWithTenant
       if (!resultObject.id || !resultObject.joinUrl || !resultObject.joinWebUrl) {
         throw new HttpError({
           statusCode: 500,
-          message: `Error creating MS Teams meeting: ${resultObject.error.message}`,
+          message: `Error creating MS Teams meeting: ${resultObject.error?.message || "missing required fields in response"}`,
         });
       }
+
+      logger.debug("Teams meeting created", { meetingId: resultObject.id });
 
       return Promise.resolve({
         type: "office365_video",
