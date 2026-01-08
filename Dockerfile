@@ -154,5 +154,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/version', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start the application using start.sh which handles migrations automatically
-# If DATABASE_HOST is not set, extract it from DATABASE_URL
-CMD ["dumb-init", "sh", "-c", "if [ -n \"$DATABASE_URL\" ] && [ -z \"$DATABASE_HOST\" ]; then export DATABASE_HOST=$(echo $DATABASE_URL | sed -E 's|.*@([^:/]+).*|\\1|'); fi && /app/scripts/start.sh"]
+# Extract DATABASE_HOST from DATABASE_URL if not set (for wait-for-it.sh)
+CMD ["dumb-init", "sh", "-c", "if [ -z \"$DATABASE_HOST\" ] && [ -n \"$DATABASE_URL\" ]; then export DATABASE_HOST=$(echo \"$DATABASE_URL\" | sed -E 's|.*@([^:/]+)(:([0-9]+))?.*|\\1:\\3|' | sed 's|:$||'); fi && /app/scripts/start.sh"]
