@@ -133,6 +133,9 @@ COPY --from=builder /app/i18n.lock ./i18n.lock
 COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web ./apps/web
 
+# Copy scripts needed for startup (migrations, etc.)
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+
 # Copy node_modules
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
@@ -150,5 +153,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/version', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application using dumb-init for proper signal handling
-CMD ["dumb-init", "yarn", "workspace", "@calcom/web", "start"]
+# Start the application using start.sh which handles migrations automatically
+# If DATABASE_HOST is not set, extract it from DATABASE_URL
+CMD ["dumb-init", "sh", "-c", "if [ -n \"$DATABASE_URL\" ] && [ -z \"$DATABASE_HOST\" ]; then export DATABASE_HOST=$(echo $DATABASE_URL | sed -E 's|.*@([^:/]+).*|\\1|'); fi && /app/scripts/start.sh"]
