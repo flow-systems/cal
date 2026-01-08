@@ -126,11 +126,18 @@ export const MINUTES_TO_BOOK = process.env.NEXT_PUBLIC_MINUTES_TO_BOOK || "5";
 export const ENABLE_PROFILE_SWITCHER = process.env.NEXT_PUBLIC_ENABLE_PROFILE_SWITCHER === "1";
 // Needed for orgs
 // Parse comma-separated hostnames and properly quote them for JSON parsing
-export const ALLOWED_HOSTNAMES = process.env.ALLOWED_HOSTNAMES
-  ? (process.env.ALLOWED_HOSTNAMES.split(",").map((h) => h.trim()).filter(Boolean) as string[])
+// Support both ALLOWED_HOSTNAMES (uppercase) and allowed_hostnames (lowercase)
+export const ALLOWED_HOSTNAMES = (process.env.ALLOWED_HOSTNAMES || process.env.allowed_hostnames)
+  ? ((process.env.ALLOWED_HOSTNAMES || process.env.allowed_hostnames || "")
+      .split(",")
+      .map((h) => h.trim())
+      .filter(Boolean) as string[])
   : [];
-export const RESERVED_SUBDOMAINS = process.env.RESERVED_SUBDOMAINS
-  ? (process.env.RESERVED_SUBDOMAINS.split(",").map((h) => h.trim()).filter(Boolean) as string[])
+export const RESERVED_SUBDOMAINS = (process.env.RESERVED_SUBDOMAINS || process.env.reserved_subdomains)
+  ? ((process.env.RESERVED_SUBDOMAINS || process.env.reserved_subdomains || "")
+      .split(",")
+      .map((h) => h.trim())
+      .filter(Boolean) as string[])
   : [];
 
 export const ORGANIZATION_SELF_SERVE_PRICE = parseFloat(
