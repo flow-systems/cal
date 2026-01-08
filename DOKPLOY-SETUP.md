@@ -108,6 +108,10 @@ If your `NEXT_PUBLIC_WEBAPP_URL` is `https://meet.ai-in-action.de`, then:
 ```
 ALLOWED_HOSTNAMES=ai-in-action.de
 ```
+or (lowercase variant):
+```
+allowed_hostnames=ai-in-action.de
+```
 
 If you're using multiple domains (comma-separated, no spaces needed):
 ```
@@ -115,6 +119,7 @@ ALLOWED_HOSTNAMES=ai-in-action.de,another-domain.com
 ```
 
 **Format:** Comma-separated list of base domains (no quotes needed)
+**Note:** Both `ALLOWED_HOSTNAMES` (uppercase) and `allowed_hostnames` (lowercase) are supported. Uppercase takes precedence if both are set.
 **Without this, you'll see warnings: "Match of WEBAPP_URL with ALLOWED_HOSTNAMES failed"**
 
 ### Other Common Runtime Variables
