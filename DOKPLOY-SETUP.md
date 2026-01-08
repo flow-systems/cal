@@ -109,11 +109,12 @@ If your `NEXT_PUBLIC_WEBAPP_URL` is `https://meet.ai-in-action.de`, then:
 ALLOWED_HOSTNAMES=ai-in-action.de
 ```
 
-If you're using multiple domains:
+If you're using multiple domains (comma-separated, no spaces needed):
 ```
 ALLOWED_HOSTNAMES=ai-in-action.de,another-domain.com
 ```
 
+**Format:** Comma-separated list of base domains (no quotes needed)
 **Without this, you'll see warnings: "Match of WEBAPP_URL with ALLOWED_HOSTNAMES failed"**
 
 ### Other Common Runtime Variables
