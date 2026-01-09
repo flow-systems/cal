@@ -140,8 +140,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
 
-# Set correct permissions
-RUN chown -R nextjs:nodejs /app
+# Copy Prisma schema for migrations
+COPY --from=builder /app/packages/prisma/schema.prisma ./packages/prisma/schema.prisma
+COPY --from=builder /app/packages/prisma/migrations ./packages/prisma/migrations
+
+# Set correct permissions and make scripts executable
+RUN chown -R nextjs:nodejs /app && \
+    chmod +x /app/scripts/*.sh 2>/dev/null || true
 
 # Switch to non-root user
 USER nextjs
@@ -153,6 +158,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/version', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application using start.sh which handles migrations automatically
-# Extract DATABASE_HOST from DATABASE_URL if not set (for wait-for-it.sh)
-CMD ["dumb-init", "sh", "-c", "if [ -z \"$DATABASE_HOST\" ] && [ -n \"$DATABASE_URL\" ]; then export DATABASE_HOST=$(echo \"$DATABASE_URL\" | sed -E 's|.*@([^:/]+)(:([0-9]+))?.*|\\1:\\3|' | sed 's|:$||'); fi && /app/scripts/start.sh"]
+# Run migrations, seed app store, then start the application
+# Note: prisma migrate deploy only applies pending migrations (safe to run multiple times)
+CMD ["dumb-init", "sh", "-c", "cd /app && if [ -n \"$DATABASE_URL\" ]; then echo 'Running database migrations...' && yarn workspace @calcom/prisma db-deploy 2>&1 && echo 'Migrations completed.' || (echo 'Migration error, but continuing...' && true); echo 'Seeding app store...' && (yarn workspace @calcom/prisma seed-app-store 2>&1 || echo 'Seed skipped (non-fatal)'); else echo 'WARNING: DATABASE_URL not set, skipping migrations'; fi && echo 'Starting application...' && yarn workspace @calcom/web start"]
