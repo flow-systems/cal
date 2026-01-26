@@ -10,6 +10,7 @@ import { aiVoiceAgentRouter } from "./aiVoiceAgent/_router";
 import { apiKeysRouter } from "./apiKeys/_router";
 import { appsRouter } from "./apps/_router";
 import { attributesRouter } from "./attributes/_router";
+import { boardsRouter } from "./boards/_router";
 import { authRouter } from "./auth/_router";
 import { availabilityRouter } from "./availability/_router";
 import { bookingsRouter } from "./bookings/_router";
@@ -51,6 +52,7 @@ export const viewerRouter = router({
   public: publicViewerRouter,
   auth: authRouter,
   deploymentSetup: deploymentSetupRouter,
+  boards: boardsRouter,
   bookings: bookingsRouter,
   calendars: calendarsRouter,
   calVideo: calVideoRouter,
